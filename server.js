@@ -10,9 +10,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/api/rewrite', rewriteRoute);
 
-app.get('*', (req, res) => {
+app.use(function(req, res) {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`The I Doctor running on port ${PORT}`));
+app.listen(PORT, () => console.log('The I Doctor running on port ' + PORT));
