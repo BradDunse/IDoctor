@@ -1,1 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The I Doctor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1a1a1a;
+      background: #f5f5f2;
+      padding: 1.5rem 1rem;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); border: 0;
+    }
+
+    header { margin-bottom: 2rem; }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+    }
+
+    .tagline {
+      font-size: 15px;
+      color: #555;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e0e0dc;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #1a1a1a;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #1a1a1a;
+    }
+
+    input[type="email"],
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 15px;
+      font-family: Arial, sans-serif;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+      color: #1a1a1a;
+    }
+
+    input[type="email"]:focus,
+    textarea:focus {
+      outline: 3px solid #4a90d9;
+      outline-offset: 1px;
+      border-color: #4a90d9;
+    }
+
+    textarea {
+      min-height: 200px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .slider-group { margin-bottom: 1.25rem; }
+
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .slider-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .slider-value {
+      font-size: 13px;
+      color: #555;
+      min-width: 180px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #4a90d9;
+      height: 6px;
+      cursor: pointer;
+    }
+
+    input[type="range"]:focus {
+      outline: 3px solid #4a90d9;
+      outline-offset: 2px;
+    }
+
+    .slider-ends {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .slider-ends span {
+      font-size: 11px;
+      color: #888;
+    }
+
+    .slider-desc {
+      font-size: 12px;
+      color: #888;
+      margin-top: 6px;
+    }
+
+    .zone-note {
+      background: #f0f4f8;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      font-size: 13px;
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 1.25rem;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button[type="submit"]:hover { background: #333; }
+    button[type="submit"]:focus { outline: 3px solid #4a90d9; outline-offset: 2px; }
+    button[type="submit"]:disabled { background: #999; cursor: not-allowed; }
+
+    .status {
+      font-size: 14px;
+      color: #555;
+      margin-top: 1rem;
+      min-height: 1.4em;
+      text-align: center;
+    }
+
+    .error {
+      color: #c0392b;
+      background: #fdf0ee;
+      border: 1px solid #f0c0b8;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 14px;
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .gate { display: block; }
+    .tool { display: none; }
+
+    footer {
+      margin-top: 2.5rem;
+      font-size: 13px;
+      color: #aaa;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .slider-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .slider-value { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>The I Doctor</h1>
+    <p class="tagline">Turn self-focused copy into reader-focused copy that connects.</p>
+  </header>
+
+  <main>
+
+    <section class="gate card" aria-labelledby="gate-heading">
+      <h2 id="gate-heading">Get free access</h2>
+      <p style="font-size:14px;color:#555;margin-bottom:1.25rem;">Enter your email and we'll send you updates, tips, and new tools as they arrive.</p>
+      <form id="gateForm" novalidate>
+        <label for="emailInput">Your email address</label>
+        <input type="email" id="emailInput" name="email" autocomplete="email" required placeholder="you@example.com" style="margin-bottom:1rem;">
+        <button type="submit">Get access</button>
+        <div class="error" id="gateError" role="alert"></div>
+      </form>
+    </section>
+
+    <section class="tool" aria-labelledby="tool-heading">
+      <div class="card">
+        <h2 id="tool-heading">Examine my text</h2>
+
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="openingSlider" class="slider-label">Opening voice density</label>
+            <span id="openingValue" class="slider-value" aria-live="polite">7 — strong writer presence</span>
+          </div>
+          <input
+            type="range"
+            id="openingSlider"
+            min="1" max="10" step="1" value="7"
+            aria-label="Opening voice density"
+            aria-valuemin="1" aria-valuemax="10" aria-valuenow="7"
+            aria-describedby="openingDesc"
+            oninput="updateOpening(this.value)"
+          >
+          <div class="slider-ends" aria-hidden="true">
+            <span>1 minimal</span>
+            <span>10 full voice</span>
+          </div>
+          <p id="openingDesc" class="slider-desc">How much of the writer's voice appears in the opening. Higher means more self-references up front.</p>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-row">
+            <label for="crossfadeSlider" class="slider-label">Crossfade transition speed</label>
+            <span id="crossfadeValue" class="slider-value" aria-live="polite">5 — moderate gradual shift</span>
+          </div>
+          <input
+            type="range"
+            id="crossfadeSlider"
+            min="1" max="10" step="1" value="5"
+            aria-label="Crossfade transition speed"
+            aria-valuemin="1" aria-valuemax="10" aria-valuenow="5"
+            aria-describedby="crossfadeDesc"
+            oninput="updateCrossfade(this.value)"
+          >
+          <div class="slider-ends" aria-hidden="true">
+            <span>1 very slow</span>
+            <span>10 abrupt</span>
+          </div>
+          <p id="crossfadeDesc" class="slider-desc">How quickly self-references thin out through the middle of the piece.</p>
+        </div>
+
+        <div class="zone-note" role="note">
+          Beyond the three-eighths mark the piece shifts to "you" based language. Self-references are kept only where removing them would break the meaning or voice.
+        </div>
+
+        <label for="textInput">Your text</label>
+        <textarea id="textInput" aria-describedby="textDesc" placeholder="Paste your copy here. The longer the piece the better the crossfade works." style="margin-bottom:8px;"></textarea>
+        <p id="textDesc" style="font-size:12px;color:#888;margin-bottom:1.25rem;">Paste any first-person copy, newsletter, article, email, or story.</p>
+
+        <button type="button" id="submitBtn" onclick="runDoctor()">Download my rewrite</button>
+        <div class="status" id="statusMsg" aria-live="polite" role="status"></div>
+        <div class="error" id="toolError" role="alert"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>The I Doctor. Built to help your writing connect.</p>
+  </footer>
+
+  <script>
+    let userEmail = '';
+
+    const openingDescriptions = {
+      1: '1 — very light personal voice',
+      2: '2 — light personal voice',
+      3: '3 — light personal voice',
+      4: '4 — moderate personal voice',
+      5: '5 — balanced personal voice',
+      6: '6 — balanced personal voice',
+      7: '7 — strong writer presence',
+      8: '8 — strong writer presence',
+      9: '9 — very strong writer presence',
+      10: '10 — full original voice'
+    };
+
+    const crossfadeDescriptions = {
+      1: '1 — very slow gentle fade',
+      2: '2 — slow fade',
+      3: '3 — slow fade',
+      4: '4 — moderate fade',
+      5: '5 — moderate gradual shift',
+      6: '6 — moderate gradual shift',
+      7: '7 — quicker transition',
+      8: '8 — quick transition',
+      9: '9 — fast handoff',
+      10: '10 — abrupt handoff'
+    };
+
+    function updateOpening(val) {
+      const desc = openingDescriptions[val];
+      document.getElementById('openingValue').textContent = desc;
+      const slider = document.getElementById('openingSlider');
+      slider.setAttribute('aria-valuenow', val);
+      slider.setAttribute('aria-valuetext', desc);
+    }
+
+    function updateCrossfade(val) {
+      const desc = crossfadeDescriptions[val];
+      document.getElementById('crossfadeValue').textContent = desc;
+      const slider = document.getElementById('crossfadeSlider');
+      slider.setAttribute('aria-valuenow', val);
+      slider.setAttribute('aria-valuetext', desc);
+    }
+
+    document.getElementById('gateForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('emailInput').value.trim();
+      const errorEl = document.getElementById('gateError');
+
+      if (!email || !email.includes('@')) {
+        errorEl.textContent = 'Please enter a valid email address.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      errorEl.style.display = 'none';
+      userEmail = email;
+      document.querySelector('.gate').style.display = 'none';
+      document.querySelector('.tool').style.display = 'block';
+      document.getElementById('tool-heading').focus();
+    });
+
+    async function runDoctor() {
+      const text = document.getElementById('textInput').value.trim();
+      const statusEl = document.getElementById('statusMsg');
+      const errorEl = document.getElementById('toolError');
+      const btn = document.getElementById('submitBtn');
+
+      errorEl.style.display = 'none';
+
+      if (!text) {
+        errorEl.textContent = 'Please paste some text before clicking the button.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const openingDensity = parseInt(document.getElementById('openingSlider').value);
+      const crossfadeSpeed = parseInt(document.getElementById('crossfadeSlider').value);
+
+      btn.disabled = true;
+      statusEl.textContent = 'The I Doctor is examining your text...';
+
+      try {
+        const response = await fetch('/api/rewrite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, email: userEmail, openingDensity, crossfadeSpeed })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Something went wrong.');
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'i-doctor-rewrite.docx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        const selfRefCount = response.headers.get('X-Self-Ref-Count');
+        statusEl.textContent = selfRefCount !== null
+          ? `Done. Your rewrite has ${selfRefCount} self-reference${selfRefCount == 1 ? '' : 's'} remaining.`
+          : 'Done. Your rewrite is downloading now.';
+
+      } catch (err) {
+        errorEl.textContent = err.message || 'Something went wrong. Please try again.';
+        errorEl.style.display = 'block';
+        statusEl.textContent = '';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+
+</body>
+</html>
