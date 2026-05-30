@@ -23,9 +23,10 @@ function buildSystemPrompt(openingDensity, crossfadeSpeed) {
   prompt += '- Keep formatting restrained. Bold and italic should mean something.\n';
   prompt += '- Format for mobile reading: short paragraphs, generous white space, punchy sentences.\n\n';
   prompt += 'OUTPUT FORMAT:\n';
-  prompt += 'Return a JSON object with exactly two fields:\n';
-  prompt += '{ "rewritten": "the full rewritten text in Markdown", "selfRefCount": 0 }\n';
-  prompt += 'Return ONLY the JSON object. No preamble, no explanation, no markdown code fences.';
+  prompt += 'Return ONLY a raw JSON object with no markdown, no code fences, no explanation before or after it.\n';
+  prompt += 'The JSON must have exactly two fields: rewritten (string) and selfRefCount (number).\n';
+  prompt += 'Example: {"rewritten":"your rewritten text here","selfRefCount":3}\n';
+  prompt += 'Do not wrap in backticks. Do not add any text before or after the JSON object.';
   return prompt;
 }
 
@@ -130,12 +131,18 @@ module.exports = async function rewriteRoute(req, res) {
     });
 
     var raw = message.content[0].text.trim();
+
     var result;
     try {
       result = JSON.parse(raw);
     } catch (e) {
-      var jsonMatch = raw.match(/\{[\s\S]*\}/);
-      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { rewritten: raw, selfRefCount: 0 };
+      try {
+        var cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+        var jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        result = jsonMatch ? JSON.parse(jsonMatch[0]) : { rewritten: raw, selfRefCount: 0 };
+      } catch (e2) {
+        result = { rewritten: raw, selfRefCount: 0 };
+      }
     }
 
     var docxBuffer = await generateDocx(result.rewritten);
