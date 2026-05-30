@@ -1,189 +1,120 @@
-```javascript
 const Anthropic = require('@anthropic-ai/sdk');
-const {
-  Document, Packer, Paragraph, TextRun,
-  HeadingLevel, AlignmentType, LevelFormat
-} = require('docx');
+const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, LevelFormat } = require('docx');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function buildSystemPrompt(openingDensity, crossfadeSpeed) {
-  return `You are The I Doctor, an expert writing editor. Your job is to rewrite first-person copy so it starts with the writer's authentic voice and gradually transitions to "you"-based language that speaks directly to the reader.
-
-ZONE RULES:
-- Zone 1 (first eighth of the piece): Keep self-references (I, me, my, mine, myself, I've, I'd, I'll, I'm, we, us, our) at a density matching level ${openingDensity} out of 10. Level 10 means keep nearly all self-references. Level 1 means very few.
-- Zone 2 (from one-eighth to three-eighths): Crossfade speed is ${crossfadeSpeed} out of 10. Level 10 means transition abruptly. Level 1 means fade very slowly and gently.
-- Zone 3 (beyond three-eighths): Write in "you"-based language. Only keep a self-reference if removing it would genuinely break the meaning or voice. These moments should be rare.
-
-VOICE INTELLIGENCE RULES:
-- When a sentence is the writer drawing on personal lived experience to make a point, preserve the "I" in Zone 1 and early Zone 2.
-- When a sentence shifts to a universal lesson or implication for the reader, use "you" or "you would" framing.
-- Never use flat "you had" or "you did" for experiences the reader hasn't lived. Use conditional "you would" instead.
-- The seam between personal testimony and reader invitation is where the transition happens naturally.
-
-FORMATTING RULES:
-- Apply proper Markdown formatting throughout.
-- Section headers get ## markdown heading format.
-- Quoted speech from named people gets italicized with *asterisks*.
-- Key rules, punchy declarative lines, and core principles get **bolded**.
-- Use bulleted or numbered lists only where the content genuinely calls for it.
-- Keep formatting restrained. Bold and italic should mean something.
-- Format for mobile reading: short paragraphs, generous white space, punchy sentences.
-
-OUTPUT FORMAT:
-Return a JSON object with exactly two fields:
-{
-  "rewritten": "the full rewritten text in Markdown",
-  "selfRefCount": <number of self-references remaining>
-}
-Return ONLY the JSON object. No preamble, no explanation, no markdown code fences.`;
+  var prompt = 'You are The I Doctor, an expert writing editor. Your job is to rewrite first-person copy so it starts with the writers authentic voice and gradually transitions to you-based language that speaks directly to the reader.\n\n';
+  prompt += 'ZONE RULES:\n';
+  prompt += '- Zone 1 (first eighth of the piece): Keep self-references (I, me, my, mine, myself, I\'ve, I\'d, I\'ll, I\'m, we, us, our) at a density matching level ' + openingDensity + ' out of 10. Level 10 means keep nearly all self-references. Level 1 means very few.\n';
+  prompt += '- Zone 2 (from one-eighth to three-eighths): Crossfade speed is ' + crossfadeSpeed + ' out of 10. Level 10 means transition abruptly. Level 1 means fade very slowly and gently.\n';
+  prompt += '- Zone 3 (beyond three-eighths): Write in you-based language. Only keep a self-reference if removing it would genuinely break the meaning or voice. These moments should be rare.\n\n';
+  prompt += 'VOICE INTELLIGENCE RULES:\n';
+  prompt += '- When a sentence is the writer drawing on personal lived experience to make a point, preserve the I in Zone 1 and early Zone 2.\n';
+  prompt += '- When a sentence shifts to a universal lesson or implication for the reader, use you or you would framing.\n';
+  prompt += '- Never use flat you had or you did for experiences the reader has not lived. Use conditional you would instead.\n';
+  prompt += '- The seam between personal testimony and reader invitation is where the transition happens naturally.\n\n';
+  prompt += 'FORMATTING RULES:\n';
+  prompt += '- Apply proper Markdown formatting throughout.\n';
+  prompt += '- Section headers get ## markdown heading format.\n';
+  prompt += '- Quoted speech from named people gets italicized with *asterisks*.\n';
+  prompt += '- Key rules, punchy declarative lines, and core principles get **bolded**.\n';
+  prompt += '- Use bulleted or numbered lists only where the content genuinely calls for it.\n';
+  prompt += '- Keep formatting restrained. Bold and italic should mean something.\n';
+  prompt += '- Format for mobile reading: short paragraphs, generous white space, punchy sentences.\n\n';
+  prompt += 'OUTPUT FORMAT:\n';
+  prompt += 'Return a JSON object with exactly two fields:\n';
+  prompt += '{ "rewritten": "the full rewritten text in Markdown", "selfRefCount": 0 }\n';
+  prompt += 'Return ONLY the JSON object. No preamble, no explanation, no markdown code fences.';
+  return prompt;
 }
 
 async function addToKit(email) {
-  const kitApiKey = process.env.KIT_API_KEY;
-  const formId = '6711021';
-
+  var kitApiKey = process.env.KIT_API_KEY;
+  var formId = '6711021';
   if (!kitApiKey) return;
-
   try {
-    await fetch(`https://api.kit.com/v4/forms/${formId}/subscribers`, {
+    await fetch('https://api.kit.com/v4/forms/' + formId + '/subscribers', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Kit-Api-Key': kitApiKey
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Kit-Api-Key': kitApiKey },
       body: JSON.stringify({ email_address: email })
     });
   } catch (err) {
-    console.error('Kit subscription error:', err.message);
+    console.error('Kit error:', err.message);
   }
+}
+
+function parseInline(text) {
+  var runs = [];
+  var regex = /(\*\*(.+?)\*\*)|(\*(.+?)\*)/g;
+  var last = 0;
+  var match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) {
+      runs.push(new TextRun({ text: text.slice(last, match.index), font: 'Arial', size: 24 }));
+    }
+    if (match[1]) {
+      runs.push(new TextRun({ text: match[2], bold: true, font: 'Arial', size: 24 }));
+    } else if (match[3]) {
+      runs.push(new TextRun({ text: match[4], italics: true, font: 'Arial', size: 24 }));
+    }
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) {
+    runs.push(new TextRun({ text: text.slice(last), font: 'Arial', size: 24 }));
+  }
+  return runs.length > 0 ? runs : [new TextRun({ text: text, font: 'Arial', size: 24 })];
 }
 
 function parseMarkdownToDocx(markdown) {
-  const lines = markdown.split('\n');
-  const children = [];
-
-  const bulletConfig = {
+  var lines = markdown.split('\n');
+  var children = [];
+  var bulletConfig = {
     reference: 'bullets',
-    levels: [{
-      level: 0,
-      format: LevelFormat.BULLET,
-      text: '\u2022',
-      alignment: AlignmentType.LEFT,
-      style: { paragraph: { indent: { left: 720, hanging: 360 } } }
-    }]
+    levels: [{ level: 0, format: LevelFormat.BULLET, text: '\u2022', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }]
   };
-
-  function parseInline(text) {
-    const runs = [];
-    const regex = /(\*\*(.+?)\*\*)|(\*(.+?)\*)/g;
-    let last = 0;
-    let match;
-
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index > last) {
-        runs.push(new TextRun({ text: text.slice(last, match.index), font: 'Arial', size: 24 }));
-      }
-      if (match[1]) {
-        runs.push(new TextRun({ text: match[2], bold: true, font: 'Arial', size: 24 }));
-      } else if (match[3]) {
-        runs.push(new TextRun({ text: match[4], italics: true, font: 'Arial', size: 24 }));
-      }
-      last = match.index + match[0].length;
-    }
-
-    if (last < text.length) {
-      runs.push(new TextRun({ text: text.slice(last), font: 'Arial', size: 24 }));
-    }
-
-    return runs.length > 0 ? runs : [new TextRun({ text, font: 'Arial', size: 24 })];
-  }
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
+  for (var i = 0; i < lines.length; i++) {
+    var trimmed = lines[i].trim();
     if (!trimmed) {
       children.push(new Paragraph({ children: [new TextRun('')], spacing: { after: 120 } }));
-      continue;
-    }
-
-    if (trimmed.startsWith('## ')) {
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_2,
-        children: [new TextRun({ text: trimmed.slice(3), bold: true, font: 'Arial', size: 28 })],
-        spacing: { before: 240, after: 120 }
-      }));
+    } else if (trimmed.startsWith('## ')) {
+      children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: trimmed.slice(3), bold: true, font: 'Arial', size: 28 })], spacing: { before: 240, after: 120 } }));
     } else if (trimmed.startsWith('# ')) {
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        children: [new TextRun({ text: trimmed.slice(2), bold: true, font: 'Arial', size: 32 })],
-        spacing: { before: 360, after: 180 }
-      }));
+      children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: trimmed.slice(2), bold: true, font: 'Arial', size: 32 })], spacing: { before: 360, after: 180 } }));
     } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      children.push(new Paragraph({
-        numbering: { reference: 'bullets', level: 0 },
-        children: parseInline(trimmed.slice(2)),
-        spacing: { after: 80 }
-      }));
-    } else if (/^\d+\.\s/.test(trimmed)) {
-      children.push(new Paragraph({
-        children: parseInline(trimmed.replace(/^\d+\.\s/, '')),
-        spacing: { after: 80 }
-      }));
+      children.push(new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: parseInline(trimmed.slice(2)), spacing: { after: 80 } }));
     } else {
-      children.push(new Paragraph({
-        children: parseInline(trimmed),
-        spacing: { after: 160 }
-      }));
+      children.push(new Paragraph({ children: parseInline(trimmed), spacing: { after: 160 } }));
     }
   }
-
-  return { children, bulletConfig };
+  return { children: children, bulletConfig: bulletConfig };
 }
 
 async function generateDocx(rewrittenText) {
-  const { children, bulletConfig } = parseMarkdownToDocx(rewrittenText);
-
-  const doc = new Document({
+  var parsed = parseMarkdownToDocx(rewrittenText);
+  var doc = new Document({
     styles: {
-      default: {
-        document: { run: { font: 'Arial', size: 24 } }
-      },
+      default: { document: { run: { font: 'Arial', size: 24 } } },
       paragraphStyles: [
-        {
-          id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run: { size: 32, bold: true, font: 'Arial', color: '000000' },
-          paragraph: { spacing: { before: 360, after: 180 }, outlineLevel: 0 }
-        },
-        {
-          id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run: { size: 28, bold: true, font: 'Arial', color: '000000' },
-          paragraph: { spacing: { before: 240, after: 120 }, outlineLevel: 1 }
-        }
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 32, bold: true, font: 'Arial', color: '000000' }, paragraph: { spacing: { before: 360, after: 180 }, outlineLevel: 0 } },
+        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 28, bold: true, font: 'Arial', color: '000000' }, paragraph: { spacing: { before: 240, after: 120 }, outlineLevel: 1 } }
       ]
     },
-    numbering: { config: [bulletConfig] },
-    sections: [{
-      properties: {
-        page: {
-          size: { width: 12240, height: 15840 },
-          margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
-        }
-      },
-      children
-    }]
+    numbering: { config: [parsed.bulletConfig] },
+    sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, children: parsed.children }]
   });
-
   return await Packer.toBuffer(doc);
 }
 
 module.exports = async function rewriteRoute(req, res) {
-  const { text, email, openingDensity, crossfadeSpeed } = req.body;
+  var text = req.body.text;
+  var email = req.body.email;
+  var openingDensity = req.body.openingDensity || 7;
+  var crossfadeSpeed = req.body.crossfadeSpeed || 5;
 
   if (!text || !email) {
     return res.status(400).json({ error: 'Text and email are required.' });
   }
-
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(500).json({ error: 'API key not configured.' });
   }
@@ -191,27 +122,27 @@ module.exports = async function rewriteRoute(req, res) {
   try {
     await addToKit(email);
 
-    const message = await client.messages.create({
+    var message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      system: buildSystemPrompt(openingDensity || 7, crossfadeSpeed || 5),
+      system: buildSystemPrompt(openingDensity, crossfadeSpeed),
       messages: [{ role: 'user', content: text }]
     });
 
-    const raw = message.content[0].text.trim();
-    let parsed;
+    var raw = message.content[0].text.trim();
+    var result;
     try {
-      parsed = JSON.parse(raw);
-    } catch {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { rewritten: raw, selfRefCount: 0 };
+      result = JSON.parse(raw);
+    } catch (e) {
+      var jsonMatch = raw.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { rewritten: raw, selfRefCount: 0 };
     }
 
-    const docxBuffer = await generateDocx(parsed.rewritten);
+    var docxBuffer = await generateDocx(result.rewritten);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename="i-doctor-rewrite.docx"');
-    res.setHeader('X-Self-Ref-Count', parsed.selfRefCount || 0);
+    res.setHeader('X-Self-Ref-Count', result.selfRefCount || 0);
     res.send(docxBuffer);
 
   } catch (err) {
@@ -219,9 +150,3 @@ module.exports = async function rewriteRoute(req, res) {
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
-```
-
-Once you've committed that, the next step is adding your Kit API key to Vercel. Go to your Vercel project, click "Environment Variables" in the left navigation, and add:
-
-Name: `KIT_API_KEY`
-Value: `X0Bz1mVRGWbzi2fAyOKisQ`
