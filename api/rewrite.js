@@ -17,16 +17,17 @@ function buildSystemPrompt(openingDensity, crossfadeSpeed) {
   prompt += 'FORMATTING RULES:\n';
   prompt += '- Apply proper Markdown formatting throughout.\n';
   prompt += '- Section headers get ## markdown heading format.\n';
-  prompt += '- Quoted speech from named people gets italicized with *asterisks*.\n';
+  prompt += '- When italicizing quoted speech, place the quotation marks OUTSIDE the asterisks like this: "*spoken words*" not *"spoken words"*. This keeps punctuation separate from italic formatting.\n';
   prompt += '- Key rules, punchy declarative lines, and core principles get **bolded**.\n';
   prompt += '- Use bulleted or numbered lists only where the content genuinely calls for it.\n';
   prompt += '- Keep formatting restrained. Bold and italic should mean something.\n';
   prompt += '- Format for mobile reading: short paragraphs, generous white space, punchy sentences.\n\n';
   prompt += 'OUTPUT FORMAT:\n';
-  prompt += 'Return ONLY a raw JSON object with no markdown, no code fences, no explanation before or after it.\n';
-  prompt += 'The JSON must have exactly two fields: rewritten (string) and selfRefCount (number).\n';
-  prompt += 'Example: {"rewritten":"your rewritten text here","selfRefCount":3}\n';
-  prompt += 'Do not wrap in backticks. Do not add any text before or after the JSON object.';
+  prompt += 'Return a single valid JSON object and nothing else. No markdown fences, no explanation, no text before or after.\n';
+  prompt += 'The JSON object must have exactly two fields:\n';
+  prompt += '- rewritten: the full rewritten text as a string with \\n for line breaks\n';
+  prompt += '- selfRefCount: a number counting remaining self-references\n';
+  prompt += 'Start your response with { and end with }. Nothing else.';
   return prompt;
 }
 
@@ -145,7 +146,8 @@ module.exports = async function rewriteRoute(req, res) {
       }
     }
 
-    var docxBuffer = await generateDocx(result.rewritten);
+    var rewrittenText = result.rewritten || raw;
+    var docxBuffer = await generateDocx(rewrittenText);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename="i-doctor-rewrite.docx"');
