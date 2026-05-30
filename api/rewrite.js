@@ -1,8 +1,8 @@
+```javascript
 const Anthropic = require('@anthropic-ai/sdk');
 const {
   Document, Packer, Paragraph, TextRun,
-  HeadingLevel, AlignmentType, LevelFormat,
-  BorderStyle, WidthType
+  HeadingLevel, AlignmentType, LevelFormat
 } = require('docx');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -24,10 +24,10 @@ VOICE INTELLIGENCE RULES:
 FORMATTING RULES:
 - Apply proper Markdown formatting throughout.
 - Section headers get ## markdown heading format.
-- Quoted speech from named people (like "Nick says...") gets italicized with *asterisks*.
+- Quoted speech from named people gets italicized with *asterisks*.
 - Key rules, punchy declarative lines, and core principles get **bolded**.
-- Use bulleted or numbered lists only where the content genuinely calls for it, not by default.
-- Keep formatting restrained. Bold and italic should mean something. If everything is emphasized, nothing is.
+- Use bulleted or numbered lists only where the content genuinely calls for it.
+- Keep formatting restrained. Bold and italic should mean something.
 - Format for mobile reading: short paragraphs, generous white space, punchy sentences.
 
 OUTPUT FORMAT:
@@ -37,6 +37,26 @@ Return a JSON object with exactly two fields:
   "selfRefCount": <number of self-references remaining>
 }
 Return ONLY the JSON object. No preamble, no explanation, no markdown code fences.`;
+}
+
+async function addToKit(email) {
+  const kitApiKey = process.env.KIT_API_KEY;
+  const formId = '6711021';
+
+  if (!kitApiKey) return;
+
+  try {
+    await fetch(`https://api.kit.com/v4/forms/${formId}/subscribers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Kit-Api-Key': kitApiKey
+      },
+      body: JSON.stringify({ email_address: email })
+    });
+  } catch (err) {
+    console.error('Kit subscription error:', err.message);
+  }
 }
 
 function parseMarkdownToDocx(markdown) {
@@ -53,19 +73,6 @@ function parseMarkdownToDocx(markdown) {
       style: { paragraph: { indent: { left: 720, hanging: 360 } } }
     }]
   };
-
-  const numberConfig = {
-    reference: 'numbers',
-    levels: [{
-      level: 0,
-      format: LevelFormat.DECIMAL,
-      text: '%1.',
-      alignment: AlignmentType.LEFT,
-      style: { paragraph: { indent: { left: 720, hanging: 360 } } }
-    }]
-  };
-
-  let numberRef = 0;
 
   function parseInline(text) {
     const runs = [];
@@ -119,9 +126,7 @@ function parseMarkdownToDocx(markdown) {
         spacing: { after: 80 }
       }));
     } else if (/^\d+\.\s/.test(trimmed)) {
-      numberRef++;
       children.push(new Paragraph({
-        numbering: { reference: `numbers-${numberRef}`, level: 0 },
         children: parseInline(trimmed.replace(/^\d+\.\s/, '')),
         spacing: { after: 80 }
       }));
@@ -133,7 +138,7 @@ function parseMarkdownToDocx(markdown) {
     }
   }
 
-  return { children, bulletConfig, numberConfig };
+  return { children, bulletConfig };
 }
 
 async function generateDocx(rewrittenText) {
@@ -157,9 +162,7 @@ async function generateDocx(rewrittenText) {
         }
       ]
     },
-    numbering: {
-      config: [bulletConfig]
-    },
+    numbering: { config: [bulletConfig] },
     sections: [{
       properties: {
         page: {
@@ -186,6 +189,8 @@ module.exports = async function rewriteRoute(req, res) {
   }
 
   try {
+    await addToKit(email);
+
     const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
@@ -214,3 +219,9 @@ module.exports = async function rewriteRoute(req, res) {
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
+```
+
+Once you've committed that, the next step is adding your Kit API key to Vercel. Go to your Vercel project, click "Environment Variables" in the left navigation, and add:
+
+Name: `KIT_API_KEY`
+Value: `X0Bz1mVRGWbzi2fAyOKisQ`
