@@ -123,7 +123,7 @@ module.exports = async function rewriteRoute(req, res) {
     await addToKit(email);
 
     var message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 4096,
       system: buildSystemPrompt(openingDensity, crossfadeSpeed),
       messages: [{ role: 'user', content: text }]
